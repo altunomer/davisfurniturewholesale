@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
 import { INITIAL_PRODUCTS } from '@/data/initialProducts';
 import { ProductDetailClient } from './ProductDetailClient';
 
@@ -19,7 +18,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!product) {
     return {
-      title: 'Product Not Found | Davis Furniture',
+      title: 'Davis Furniture | Wholesale Bed Specialists',
     };
   }
 
@@ -52,40 +51,36 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
-  const product = INITIAL_PRODUCTS.find((p) => p.slug.toLowerCase() === slug.toLowerCase());
-
-  if (!product) {
-    notFound();
-  }
-
-  // Schema.org Product structured data for Googlebot SEO
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Product',
-    name: product.name,
-    image: product.images,
-    description: product.description,
-    category: product.category,
-    brand: {
-      '@type': 'Brand',
-      name: 'Davis Furniture',
-    },
-    offers: {
-      '@type': 'AggregateOffer',
-      priceCurrency: 'GBP',
-      availability: 'https://schema.org/InStock',
-      itemCondition: 'https://schema.org/NewCondition',
-    },
-  };
+  const product = INITIAL_PRODUCTS.find((p) => p.slug.toLowerCase() === slug.toLowerCase()) || null;
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
-      <ProductDetailClient initialProduct={product} />
+      {product && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Product',
+              name: product.name,
+              image: product.images,
+              description: product.description,
+              category: product.category,
+              brand: {
+                '@type': 'Brand',
+                name: 'Davis Furniture',
+              },
+              offers: {
+                '@type': 'AggregateOffer',
+                priceCurrency: 'GBP',
+                availability: 'https://schema.org/InStock',
+                itemCondition: 'https://schema.org/NewCondition',
+              },
+            }),
+          }}
+        />
+      )}
+      <ProductDetailClient slug={slug} initialProduct={product} />
     </>
   );
 }
-

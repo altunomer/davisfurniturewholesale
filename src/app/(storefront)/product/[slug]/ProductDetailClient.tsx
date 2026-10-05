@@ -22,13 +22,19 @@ import {
 } from 'lucide-react';
 
 interface ProductDetailClientProps {
-  initialProduct: Product;
+  slug?: string;
+  initialProduct?: Product | null;
 }
 
-export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ initialProduct }) => {
+export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ slug, initialProduct }) => {
   const { products, getProductBySlug } = useProducts();
-  // Allow context to supply updated version if edited in admin, fallback to initialProduct
-  const product = getProductBySlug(initialProduct.slug) || initialProduct;
+  
+  // Extract slug from prop, initialProduct, or window.location
+  const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+  const urlSlug = pathname.split('/').filter(Boolean).pop() || '';
+  const targetSlug = slug || initialProduct?.slug || urlSlug;
+
+  const product = (targetSlug ? getProductBySlug(targetSlug) : undefined) || initialProduct;
 
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [selectedSize, setSelectedSize] = useState<string>('');
@@ -45,6 +51,26 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ initia
     quantity: '5-10 Units',
     message: ''
   });
+
+  if (!product) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center text-center p-8 bg-neutral-50">
+        <div className="w-14 h-14 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mb-4">
+          <Package className="w-7 h-7" />
+        </div>
+        <h1 className="text-2xl font-bold text-neutral-900">Product Not Found</h1>
+        <p className="text-sm text-neutral-500 mt-2 max-w-md">
+          The requested bed model could not be found or may have been updated.
+        </p>
+        <Link
+          href="/products"
+          className="mt-6 inline-flex items-center px-6 py-3 bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-colors shadow-sm"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" /> Back to Wholesale Catalog
+        </Link>
+      </div>
+    );
+  }
 
   const images = product.images.length > 0
     ? product.images

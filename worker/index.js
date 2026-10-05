@@ -202,6 +202,25 @@ export default {
       });
     }
 
+    // Handle /product/* fallback for newly created products in KV
+    if (url.pathname.startsWith('/product/')) {
+      const assetRes = await env.ASSETS.fetch(request);
+      if (assetRes.status === 404) {
+        const shellUrl = new URL('/product/mars-range', request.url);
+        const shellRes = await env.ASSETS.fetch(new Request(shellUrl, request));
+        if (shellRes.ok) {
+          return new Response(shellRes.body, {
+            status: 200,
+            headers: {
+              ...Object.fromEntries(shellRes.headers),
+              'Content-Type': 'text/html;charset=UTF-8',
+            },
+          });
+        }
+      }
+      return assetRes;
+    }
+
     // Default: serve static assets from ./out
     return env.ASSETS.fetch(request);
   },

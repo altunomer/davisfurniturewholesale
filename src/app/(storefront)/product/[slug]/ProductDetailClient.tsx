@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import type { Product } from '@/types/product';
 import { useProducts } from '@/context/ProductContext';
@@ -391,8 +392,8 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ slug, 
       />
 
       {/* Quote Request Modal */}
-      {showQuoteModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+      {showQuoteModal && mounted && createPortal(
+        <div className="fixed inset-0 z-[99999] overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 sm:p-8 relative shadow-2xl animate-in fade-in zoom-in-95 duration-200">
             <button
               onClick={() => setShowQuoteModal(false)}
@@ -502,7 +503,8 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ slug, 
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

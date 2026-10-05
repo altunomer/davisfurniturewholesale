@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 
 interface ProductLightboxProps {
@@ -18,10 +19,15 @@ export const ProductLightbox: React.FC<ProductLightboxProps> = ({
   productName,
   onClose
 }) => {
+  const [mounted, setMounted] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [scale, setScale] = useState(1);
   const [showControls, setShowControls] = useState(true);
   const controlsTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Sync index when initialIndex or isOpen changes
   useEffect(() => {
@@ -87,7 +93,7 @@ export const ProductLightbox: React.FC<ProductLightboxProps> = ({
     };
   }, [isOpen, nextImage, prevImage, onClose, resetControlsTimer]);
 
-  if (!isOpen || images.length === 0) return null;
+  if (!isOpen || !mounted || images.length === 0) return null;
 
   // Zoom helpers
   const zoomIn = (e?: React.MouseEvent) => {
@@ -122,9 +128,9 @@ export const ProductLightbox: React.FC<ProductLightboxProps> = ({
   const activeSrc = images[currentIndex] || images[0];
   const hasMultipleImages = images.length > 1;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 overflow-hidden bg-black/95 backdrop-blur-md select-none touch-none overscroll-none flex items-center justify-center animate-in fade-in duration-200"
+      className="fixed inset-0 z-[99999] overflow-hidden bg-black/95 backdrop-blur-md select-none touch-none overscroll-none flex items-center justify-center animate-in fade-in duration-200"
       onMouseMove={resetControlsTimer}
       onTouchStart={resetControlsTimer}
       onWheel={handleWheel}
@@ -296,6 +302,8 @@ export const ProductLightbox: React.FC<ProductLightboxProps> = ({
           </div>
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   );
 };
+

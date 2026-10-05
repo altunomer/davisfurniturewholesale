@@ -40,3 +40,4 @@ logs
 *.sw?
 *.esproj.user
 obj/
+

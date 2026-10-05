@@ -1,13 +1,13 @@
 import type { Metadata, Viewport } from 'next';
-import { Quicksand } from 'next/font/google';
+import { Ubuntu } from 'next/font/google';
 import './globals.css';
 import { ProductProvider } from '../context/ProductContext';
 
-const quicksand = Quicksand({
+const ubuntu = Ubuntu({
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-quicksand',
-  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-ubuntu',
+  weight: ['300', '400', '500', '700'],
 });
 
 export const viewport: Viewport = {
@@ -52,8 +52,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={quicksand.variable}>
-      <body className={`${quicksand.className} min-h-screen flex flex-col bg-white text-neutral-900`}>
+    <html lang="en" className={ubuntu.variable}>
+      <body className={`${ubuntu.className} min-h-screen flex flex-col bg-white text-neutral-900`}>
         <ProductProvider>
           {children}
         </ProductProvider>
@@ -61,4 +61,3 @@ export default function RootLayout({
     </html>
   );
 }
-

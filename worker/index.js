@@ -125,7 +125,7 @@ export default {
         if (request.method === 'POST') {
           try {
             const { password, currentPassword } = await request.json();
-            const savedPass = (await env.DAVIS_STORAGE.get('admin_password')) || 'davis2026';
+            const savedPass = (await env.DAVIS_STORAGE.get('admin_password')) || 'LetmeGetin010203*';
             if (currentPassword && currentPassword !== savedPass) {
               return new Response(JSON.stringify({ error: 'Current password incorrect' }), {
                 status: 401,
@@ -152,7 +152,7 @@ export default {
         if (request.method === 'POST') {
           try {
             const { password } = await request.json();
-            const savedPass = (await env.DAVIS_STORAGE.get('admin_password')) || 'davis2026';
+            const savedPass = (await env.DAVIS_STORAGE.get('admin_password')) || 'LetmeGetin010203*';
             if (password === savedPass) {
               return new Response(JSON.stringify({ success: true }), {
                 headers: { 'Content-Type': 'application/json', ...corsHeaders },
@@ -182,3 +182,4 @@ export default {
     return env.ASSETS.fetch(request);
   },
 };
+

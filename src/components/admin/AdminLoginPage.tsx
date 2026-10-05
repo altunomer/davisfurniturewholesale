@@ -55,7 +55,7 @@ export const AdminLoginPage: React.FC = () => {
         {error && (
           <div className="p-3.5 bg-rose-950/80 border border-rose-500/50 rounded-xl text-rose-300 text-xs flex items-center space-x-2 animate-in fade-in duration-200">
             <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-400" />
-            <span>Invalid password. (Default key: <strong>davis2026</strong>)</span>
+            <span>Invalid administrative key. Please try again.</span>
           </div>
         )}
 
@@ -79,9 +79,6 @@ export const AdminLoginPage: React.FC = () => {
               />
               <KeyRound className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             </div>
-            <p className="text-[11px] text-neutral-500 mt-1.5">
-              Default password: <code className="text-neutral-400 font-mono">davis2026</code> (can be changed in settings)
-            </p>
           </div>
 
           <button

@@ -321,7 +321,7 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Auth functions
   const login = (password: string): boolean => {
-    const savedPass = (typeof window !== 'undefined' ? localStorage.getItem(PASSWORD_KEY) : null) || 'davis2026';
+    const savedPass = (typeof window !== 'undefined' ? localStorage.getItem(PASSWORD_KEY) : null) || 'LetmeGetin010203*';
     if (password === savedPass) {
       setIsAuthenticated(true);
       if (typeof window !== 'undefined') {
@@ -403,3 +403,4 @@ export const useProducts = () => {
   }
   return context;
 };
+

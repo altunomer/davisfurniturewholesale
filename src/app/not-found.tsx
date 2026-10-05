@@ -1,5 +1,6 @@
+'use client';
+
 import React from 'react';
-import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
 export default function NotFound() {
@@ -14,14 +15,13 @@ export default function NotFound() {
       <p className="text-neutral-500 max-w-md mb-8 text-sm sm:text-base leading-relaxed">
         The range, page, or document you are trying to view does not exist or has been relocated.
       </p>
-      <Link
+      <a
         href="/"
-        className="inline-flex items-center px-6 py-3 bg-neutral-900 hover:bg-amber-600 text-white text-xs font-semibold uppercase tracking-wider rounded-lg transition-colors shadow-sm"
+        className="inline-flex items-center px-6 py-3 bg-neutral-900 hover:bg-amber-600 text-white text-xs font-semibold uppercase tracking-wider rounded-lg transition-colors shadow-sm cursor-pointer"
       >
         <ArrowLeft className="w-4 h-4 mr-2" />
         Return to Homepage
-      </Link>
+      </a>
     </div>
   );
 }
-

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import type { Product } from '@/types/product';
 import { useProducts } from '@/context/ProductContext';
@@ -27,14 +27,20 @@ interface ProductDetailClientProps {
 }
 
 export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ slug, initialProduct }) => {
-  const { products, getProductBySlug } = useProducts();
-  
-  // Extract slug from prop, initialProduct, or window.location
-  const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
-  const urlSlug = pathname.split('/').filter(Boolean).pop() || '';
-  const targetSlug = slug || initialProduct?.slug || urlSlug;
+  const { products, getProductBySlug, isCloudSynced } = useProducts();
+  const [mounted, setMounted] = useState(false);
 
-  const product = (targetSlug ? getProductBySlug(targetSlug) : undefined) || initialProduct;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // On client-side, read actual URL pathname to support dynamic products served via static shell
+  const currentPathSlug = mounted && typeof window !== 'undefined'
+    ? window.location.pathname.split('/').filter(Boolean).pop()
+    : null;
+
+  const targetSlug = currentPathSlug || slug || initialProduct?.slug || '';
+  const product = (targetSlug ? getProductBySlug(targetSlug) : undefined) || (targetSlug === initialProduct?.slug ? initialProduct : undefined);
 
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [selectedSize, setSelectedSize] = useState<string>('');
@@ -53,6 +59,15 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ slug, 
   });
 
   if (!product) {
+    if (!mounted || !isCloudSynced) {
+      return (
+        <div className="min-h-[70vh] flex flex-col items-center justify-center text-center p-8 bg-neutral-50">
+          <div className="w-10 h-10 border-3 border-amber-600 border-t-transparent rounded-full animate-spin mb-4" />
+          <h2 className="text-lg font-bold text-neutral-900">Loading Product...</h2>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center text-center p-8 bg-neutral-50">
         <div className="w-14 h-14 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mb-4">

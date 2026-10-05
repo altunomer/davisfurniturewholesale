@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { Product, ContactSettings, HeroSlide } from '../types/product';
 import { INITIAL_PRODUCTS, SITE_INFO } from '../data/initialProducts';
 
@@ -31,6 +31,10 @@ interface ProductContextType {
   // Contact Settings
   contactSettings: ContactSettings;
   updateContactSettings: (settings: Partial<ContactSettings>) => void;
+
+  // Cloud status
+  isCloudSynced: boolean;
+  syncToCloud: () => Promise<void>;
 }
 
 const ProductContext = createContext<ProductContextType | undefined>(undefined);
@@ -58,15 +62,33 @@ const DEFAULT_CONTACT_SETTINGS: ContactSettings = {
   companyAddress: SITE_INFO.address
 };
 
+// Helper for cloud sync
+async function apiPost(endpoint: string, data: any) {
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    return res.ok;
+  } catch (err) {
+    console.warn(`[Cloud Sync] Error sending to ${endpoint}:`, err);
+    return false;
+  }
+}
+
 export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
   const [slides, setSlides] = useState<HeroSlide[]>(DEFAULT_SLIDES);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [contactSettings, setContactSettings] = useState<ContactSettings>(DEFAULT_CONTACT_SETTINGS);
   const [isHydrated, setIsHydrated] = useState<boolean>(false);
+  const [isCloudSynced, setIsCloudSynced] = useState<boolean>(false);
 
-  // Hydrate client-side from localStorage
+  // 1. Initial hydration: localStorage first for speed, then fetch live from Cloudflare KV
   useEffect(() => {
+    let isMounted = true;
+
     try {
       if (typeof window !== 'undefined') {
         const savedProducts = localStorage.getItem(STORAGE_KEY);
@@ -98,11 +120,65 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch (e) {
       console.error('Failed to load state from localStorage', e);
     } finally {
-      setIsHydrated(true);
+      if (isMounted) setIsHydrated(true);
     }
+
+    // 2. Fetch live data from Cloudflare KV
+    async function fetchCloudData() {
+      try {
+        const [prodRes, slideRes, setRes] = await Promise.allSettled([
+          fetch('/api/products').then((r) => (r.ok ? r.json() : null)),
+          fetch('/api/slides').then((r) => (r.ok ? r.json() : null)),
+          fetch('/api/settings').then((r) => (r.ok ? r.json() : null))
+        ]);
+
+        if (!isMounted) return;
+
+        // Products from Cloudflare KV
+        if (prodRes.status === 'fulfilled' && prodRes.value) {
+          if (Array.isArray(prodRes.value) && prodRes.value.length > 0) {
+            setProducts(prodRes.value);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(prodRes.value));
+            }
+          }
+        } else if (prodRes.status === 'fulfilled' && prodRes.value === null) {
+          // Cloud KV is empty on first run: auto-seed initial products to KV
+          apiPost('/api/products', INITIAL_PRODUCTS);
+          apiPost('/api/slides', DEFAULT_SLIDES);
+          apiPost('/api/settings', DEFAULT_CONTACT_SETTINGS);
+        }
+
+        // Slides from Cloudflare KV
+        if (slideRes.status === 'fulfilled' && slideRes.value && Array.isArray(slideRes.value) && slideRes.value.length > 0) {
+          setSlides(slideRes.value);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(SLIDES_STORAGE_KEY, JSON.stringify(slideRes.value));
+          }
+        }
+
+        // Settings from Cloudflare KV
+        if (setRes.status === 'fulfilled' && setRes.value && typeof setRes.value === 'object') {
+          setContactSettings((prev) => ({ ...prev, ...setRes.value }));
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(CONTACT_SETTINGS_KEY, JSON.stringify(setRes.value));
+          }
+        }
+
+        setIsCloudSynced(true);
+      } catch (err) {
+        console.warn('[Cloud Sync] Cloudflare KV not reachable or running in local dev mode:', err);
+      }
+    }
+
+    fetchCloudData();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  // Save changes to localStorage only after initial hydration
+  // Save changes to localStorage
   useEffect(() => {
     if (!isHydrated) return;
     try {
@@ -130,42 +206,58 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [contactSettings, isHydrated]);
 
+  // Product Operations with automatic Cloudflare KV sync
   const addProduct = (item: Omit<Product, 'id' | 'createdAt'>): Product => {
     const newProduct: Product = {
       ...item,
       id: `p-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       createdAt: new Date().toISOString()
     };
-    setProducts((prev) => [newProduct, ...prev]);
+    setProducts((prev) => {
+      const updated = [newProduct, ...prev];
+      apiPost('/api/products', updated);
+      return updated;
+    });
     return newProduct;
   };
 
   const updateProduct = (id: string, updates: Partial<Product>) => {
-    setProducts((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, ...updates } : item))
-    );
+    setProducts((prev) => {
+      const updated = prev.map((item) => (item.id === id ? { ...item, ...updates } : item));
+      apiPost('/api/products', updated);
+      return updated;
+    });
   };
 
   const deleteProduct = (id: string) => {
-    setProducts((prev) => prev.filter((item) => item.id !== id));
+    setProducts((prev) => {
+      const updated = prev.filter((item) => item.id !== id);
+      apiPost('/api/products', updated);
+      return updated;
+    });
   };
 
   const toggleFavorite = (id: string) => {
-    setProducts((prev) =>
-      prev.map((item) =>
+    setProducts((prev) => {
+      const updated = prev.map((item) =>
         item.id === id ? { ...item, isFavorite: !item.isFavorite } : item
-      )
-    );
+      );
+      apiPost('/api/products', updated);
+      return updated;
+    });
   };
 
   const importProducts = (newProducts: Product[], replaceExisting: boolean) => {
     if (replaceExisting) {
       setProducts(newProducts);
+      apiPost('/api/products', newProducts);
     } else {
       setProducts((prev) => {
         const existingIds = new Set(prev.map((p) => p.id));
         const nonDuplicates = newProducts.filter((p) => !existingIds.has(p.id));
-        return [...prev, ...nonDuplicates];
+        const updated = [...prev, ...nonDuplicates];
+        apiPost('/api/products', updated);
+        return updated;
       });
     }
   };
@@ -173,41 +265,55 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const resetToDefaults = () => {
     setProducts(INITIAL_PRODUCTS);
     setSlides(DEFAULT_SLIDES);
+    apiPost('/api/products', INITIAL_PRODUCTS);
+    apiPost('/api/slides', DEFAULT_SLIDES);
     if (typeof window !== 'undefined') {
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(SLIDES_STORAGE_KEY);
     }
   };
 
-  const getProductBySlug = (slug: string) => {
+  const getProductBySlug = (slug: string): Product | undefined => {
+    if (!slug) return undefined;
     return products.find((p) => p.slug.toLowerCase() === slug.toLowerCase());
   };
 
-  const getProductById = (id: string) => {
+  const getProductById = (id: string): Product | undefined => {
     return products.find((p) => p.id === id);
   };
 
-  // Slides handlers
+  // Slides handlers with automatic Cloudflare KV sync
   const addSlide = (slide: Omit<HeroSlide, 'id'>) => {
     const newSlide: HeroSlide = {
       ...slide,
       id: `slide-${Date.now()}`
     };
-    setSlides((prev) => [...prev, newSlide]);
+    setSlides((prev) => {
+      const updated = [...prev, newSlide];
+      apiPost('/api/slides', updated);
+      return updated;
+    });
   };
 
   const deleteSlide = (id: string) => {
-    setSlides((prev) => prev.filter((s) => s.id !== id));
+    setSlides((prev) => {
+      const updated = prev.filter((s) => s.id !== id);
+      apiPost('/api/slides', updated);
+      return updated;
+    });
   };
 
   const updateSlide = (id: string, updates: Partial<HeroSlide>) => {
-    setSlides((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, ...updates } : s))
-    );
+    setSlides((prev) => {
+      const updated = prev.map((s) => (s.id === id ? { ...s, ...updates } : s));
+      apiPost('/api/slides', updated);
+      return updated;
+    });
   };
 
   const resetSlides = () => {
     setSlides(DEFAULT_SLIDES);
+    apiPost('/api/slides', DEFAULT_SLIDES);
     if (typeof window !== 'undefined') {
       localStorage.removeItem(SLIDES_STORAGE_KEY);
     }
@@ -237,11 +343,26 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (typeof window !== 'undefined') {
       localStorage.setItem(PASSWORD_KEY, newPass);
     }
+    apiPost('/api/auth/password', { password: newPass });
   };
 
   const updateContactSettings = (updates: Partial<ContactSettings>) => {
-    setContactSettings((prev) => ({ ...prev, ...updates }));
+    setContactSettings((prev) => {
+      const updated = { ...prev, ...updates };
+      apiPost('/api/settings', updated);
+      return updated;
+    });
   };
+
+  // Manual trigger to force sync everything to cloud
+  const syncToCloud = useCallback(async () => {
+    await Promise.all([
+      apiPost('/api/products', products),
+      apiPost('/api/slides', slides),
+      apiPost('/api/settings', contactSettings)
+    ]);
+    setIsCloudSynced(true);
+  }, [products, slides, contactSettings]);
 
   return (
     <ProductContext.Provider
@@ -265,7 +386,9 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
         logout,
         changePassword,
         contactSettings,
-        updateContactSettings
+        updateContactSettings,
+        isCloudSynced,
+        syncToCloud
       }}
     >
       {children}
@@ -280,4 +403,3 @@ export const useProducts = () => {
   }
   return context;
 };
-

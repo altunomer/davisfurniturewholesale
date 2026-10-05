@@ -24,9 +24,10 @@ interface ProductContextType {
 
   // Auth
   isAuthenticated: boolean;
-  login: (password: string) => boolean;
+  login: (username: string, password: string) => boolean;
   logout: () => void;
   changePassword: (newPass: string) => void;
+  changeCredentials: (newUsername?: string, newPassword?: string) => void;
 
   // Contact Settings
   contactSettings: ContactSettings;
@@ -42,6 +43,7 @@ const ProductContext = createContext<ProductContextType | undefined>(undefined);
 const STORAGE_KEY = 'davis_furniture_products_v1';
 const SLIDES_STORAGE_KEY = 'davis_hero_slides_v1';
 const AUTH_KEY = 'davis_admin_authenticated';
+const USERNAME_KEY = 'davis_admin_username';
 const PASSWORD_KEY = 'davis_admin_password';
 const CONTACT_SETTINGS_KEY = 'davis_contact_settings';
 
@@ -320,9 +322,10 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   // Auth functions
-  const login = (password: string): boolean => {
+  const login = (username: string, password: string): boolean => {
+    const savedUser = (typeof window !== 'undefined' ? localStorage.getItem(USERNAME_KEY) : null) || 'dr4carys';
     const savedPass = (typeof window !== 'undefined' ? localStorage.getItem(PASSWORD_KEY) : null) || 'LetmeGetin010203*';
-    if (password === savedPass) {
+    if (username.trim() === savedUser && password === savedPass) {
       setIsAuthenticated(true);
       if (typeof window !== 'undefined') {
         sessionStorage.setItem(AUTH_KEY, 'true');
@@ -344,6 +347,14 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
       localStorage.setItem(PASSWORD_KEY, newPass);
     }
     apiPost('/api/auth/password', { password: newPass });
+  };
+
+  const changeCredentials = (newUsername?: string, newPassword?: string) => {
+    if (typeof window !== 'undefined') {
+      if (newUsername) localStorage.setItem(USERNAME_KEY, newUsername.trim());
+      if (newPassword) localStorage.setItem(PASSWORD_KEY, newPassword);
+    }
+    apiPost('/api/auth/credentials', { username: newUsername, password: newPassword });
   };
 
   const updateContactSettings = (updates: Partial<ContactSettings>) => {
@@ -385,6 +396,7 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
         login,
         logout,
         changePassword,
+        changeCredentials,
         contactSettings,
         updateContactSettings,
         isCloudSynced,

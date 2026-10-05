@@ -147,18 +147,42 @@ export default {
         }
       }
 
+      // /api/auth/credentials
+      if (url.pathname === '/api/auth/credentials') {
+        if (request.method === 'POST') {
+          try {
+            const { username, password } = await request.json();
+            if (username) {
+              await env.DAVIS_STORAGE.put('admin_username', username.trim());
+            }
+            if (password) {
+              await env.DAVIS_STORAGE.put('admin_password', password);
+            }
+            return new Response(JSON.stringify({ success: true }), {
+              headers: { 'Content-Type': 'application/json', ...corsHeaders },
+            });
+          } catch (e) {
+            return new Response(JSON.stringify({ error: e.message }), {
+              status: 400,
+              headers: { 'Content-Type': 'application/json', ...corsHeaders },
+            });
+          }
+        }
+      }
+
       // /api/auth/verify
       if (url.pathname === '/api/auth/verify') {
         if (request.method === 'POST') {
           try {
-            const { password } = await request.json();
+            const { username, password } = await request.json();
+            const savedUser = (await env.DAVIS_STORAGE.get('admin_username')) || 'dr4carys';
             const savedPass = (await env.DAVIS_STORAGE.get('admin_password')) || 'LetmeGetin010203*';
-            if (password === savedPass) {
+            if (username?.trim() === savedUser && password === savedPass) {
               return new Response(JSON.stringify({ success: true }), {
                 headers: { 'Content-Type': 'application/json', ...corsHeaders },
               });
             } else {
-              return new Response(JSON.stringify({ success: false, error: 'Invalid password' }), {
+              return new Response(JSON.stringify({ success: false, error: 'Invalid username or password' }), {
                 status: 401,
                 headers: { 'Content-Type': 'application/json', ...corsHeaders },
               });

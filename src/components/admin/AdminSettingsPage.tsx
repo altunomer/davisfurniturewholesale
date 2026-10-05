@@ -5,7 +5,7 @@ import { useProducts } from '../../context/ProductContext';
 import { Mail, KeyRound, Check, ShieldCheck, Save } from 'lucide-react';
 
 export const AdminSettingsPage: React.FC = () => {
-  const { contactSettings, updateContactSettings, changePassword } = useProducts();
+  const { contactSettings, updateContactSettings, changeCredentials } = useProducts();
 
   const [formMail, setFormMail] = useState(contactSettings.recipientEmail);
   const [subject, setSubject] = useState(contactSettings.notificationSubject);
@@ -13,6 +13,9 @@ export const AdminSettingsPage: React.FC = () => {
   const [phone, setPhone] = useState(contactSettings.companyPhone);
   const [address, setAddress] = useState(contactSettings.companyAddress);
 
+  const [adminUsername, setAdminUsername] = useState(
+    typeof window !== 'undefined' ? (localStorage.getItem('davis_admin_username') || 'dr4carys') : 'dr4carys'
+  );
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -30,20 +33,22 @@ export const AdminSettingsPage: React.FC = () => {
     setTimeout(() => setStatusMessage(null), 3500);
   };
 
-  const handlePasswordChange = (e: React.FormEvent) => {
+  const handleCredentialsChange = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newPassword || newPassword.length < 4) {
-      alert('Password must be at least 4 characters long.');
-      return;
+    if (newPassword) {
+      if (newPassword.length < 4) {
+        alert('Password must be at least 4 characters long.');
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        alert('Passwords do not match.');
+        return;
+      }
     }
-    if (newPassword !== confirmPassword) {
-      alert('Passwords do not match.');
-      return;
-    }
-    changePassword(newPassword);
+    changeCredentials(adminUsername.trim(), newPassword ? newPassword : undefined);
     setNewPassword('');
     setConfirmPassword('');
-    setStatusMessage('Admin portal password updated successfully!');
+    setStatusMessage('Admin portal credentials updated successfully!');
     setTimeout(() => setStatusMessage(null), 3500);
   };
 
@@ -171,56 +176,71 @@ export const AdminSettingsPage: React.FC = () => {
         </form>
       </div>
 
-      {/* Admin Password Change Card */}
+      {/* Admin Credentials Change Card */}
       <div className="bg-white rounded-2xl border border-neutral-200 shadow-xs p-6 sm:p-8 space-y-6">
         <div className="flex items-center space-x-3 pb-4 border-b border-neutral-100">
           <div className="p-2.5 bg-neutral-100 text-neutral-800 rounded-xl">
             <KeyRound className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-neutral-900">Change Admin Access Password</h2>
+            <h2 className="text-lg font-bold text-neutral-900">Change Admin Credentials</h2>
             <p className="text-xs text-neutral-500">
-              Update the key used to access <code className="font-mono text-neutral-800">/welcome-webmaster</code>.
+              Update the username and password used to access <code className="font-mono text-neutral-800">/welcome-webmaster</code>.
             </p>
           </div>
         </div>
 
-        <form onSubmit={handlePasswordChange} className="space-y-4 max-w-md">
+        <form onSubmit={handleCredentialsChange} className="space-y-4 max-w-md">
           <div>
             <label className="block text-xs font-semibold text-neutral-700 mb-1.5 uppercase tracking-wider">
-              New Password *
+              Admin Username *
             </label>
             <input
-              type="password"
+              type="text"
               required
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Enter new password..."
-              className="w-full px-3.5 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-amber-600"
+              value={adminUsername}
+              onChange={(e) => setAdminUsername(e.target.value)}
+              placeholder="dr4carys"
+              className="w-full px-3.5 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-amber-600 font-mono"
             />
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-neutral-700 mb-1.5 uppercase tracking-wider">
-              Confirm New Password *
+              New Password (Optional)
             </label>
             <input
               type="password"
-              required
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirm new password..."
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Leave blank to keep current password..."
               className="w-full px-3.5 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-amber-600"
             />
           </div>
+
+          {newPassword && (
+            <div>
+              <label className="block text-xs font-semibold text-neutral-700 mb-1.5 uppercase tracking-wider">
+                Confirm New Password *
+              </label>
+              <input
+                type="password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm new password..."
+                className="w-full px-3.5 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-amber-600"
+              />
+            </div>
+          )}
 
           <div className="pt-2">
             <button
               type="submit"
-              className="px-6 py-2.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors shadow-xs inline-flex items-center space-x-1.5"
+              className="px-6 py-2.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors shadow-xs inline-flex items-center space-x-1.5 cursor-pointer"
             >
               <ShieldCheck className="w-4 h-4" />
-              <span>Update Password</span>
+              <span>Update Credentials</span>
             </button>
           </div>
         </form>

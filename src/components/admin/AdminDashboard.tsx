@@ -14,11 +14,12 @@ import {
   Layers,
   ArrowRight,
   Sparkles,
-  Sliders
+  Sliders,
+  Inbox
 } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
-  const { products } = useProducts();
+  const { products, inquiries, unreadInquiriesCount } = useProducts();
 
   const totalProducts = products.length;
   const favorites = products.filter((p) => p.isFavorite).length;
@@ -37,11 +38,18 @@ export const AdminDashboard: React.FC = () => {
             Catalog & Inventory Overview
           </h1>
           <p className="text-xs sm:text-sm text-neutral-500 mt-1">
-            Manage your furniture ranges, import CSVs, and optimize product images locally.
+            Manage your furniture ranges, review incoming quote requests, and dispatch notifications.
           </p>
         </div>
 
         <div className="flex flex-wrap gap-2.5">
+          <Link
+            href="/welcome-webmaster/inquiries"
+            className="inline-flex items-center space-x-1.5 px-4 py-2.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold uppercase tracking-wider rounded-lg transition-colors shadow-xs"
+          >
+            <Inbox className="w-4 h-4" />
+            <span>Inquiries {unreadInquiriesCount > 0 ? `(${unreadInquiriesCount} New)` : ''}</span>
+          </Link>
           <Link
             href="/welcome-webmaster/products/new"
             className="inline-flex items-center space-x-1.5 px-4 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold uppercase tracking-wider rounded-lg transition-colors shadow-xs"

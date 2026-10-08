@@ -28,7 +28,7 @@ interface ProductDetailClientProps {
 }
 
 export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ slug, initialProduct }) => {
-  const { products, getProductBySlug, isCloudSynced } = useProducts();
+  const { products, getProductBySlug, isCloudSynced, addInquiry } = useProducts();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -98,13 +98,23 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ slug, 
     .filter((p) => p.id !== product.id)
     .slice(0, 3);
 
-  const handleQuoteSubmit = (e: React.FormEvent) => {
+  const handleQuoteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    await addInquiry({
+      type: 'quote',
+      name: quoteForm.name.trim(),
+      company: quoteForm.company.trim(),
+      email: quoteForm.email.trim(),
+      phone: quoteForm.phone.trim(),
+      productName: product.name + (selectedSize ? ` (${selectedSize})` : ''),
+      quantity: quoteForm.quantity,
+      message: quoteForm.message.trim()
+    });
     setQuoteSent(true);
     setTimeout(() => {
       setShowQuoteModal(false);
       setQuoteSent(false);
-    }, 2500);
+    }, 2800);
   };
 
   return (

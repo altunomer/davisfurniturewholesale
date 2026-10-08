@@ -5,7 +5,7 @@ import { MapPin, Mail, Clock, Send, CheckCircle2, Navigation } from 'lucide-reac
 import { useProducts } from '@/context/ProductContext';
 
 export const ContactClient: React.FC = () => {
-  const { contactSettings } = useProducts();
+  const { contactSettings, addInquiry } = useProducts();
   const [formData, setFormData] = useState({
     name: '',
     company: '',
@@ -15,9 +15,21 @@ export const ContactClient: React.FC = () => {
     message: ''
   });
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
+    await addInquiry({
+      type: 'contact',
+      name: formData.name.trim(),
+      company: formData.company.trim(),
+      email: formData.email.trim(),
+      phone: formData.phone.trim(),
+      subject: formData.subject.trim(),
+      message: formData.message.trim()
+    });
+    setIsSubmitting(false);
     setSubmitted(true);
   };
 

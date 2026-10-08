@@ -10,6 +10,7 @@ import {
   FileSpreadsheet,
   Settings,
   Sliders,
+  Inbox,
   ArrowLeft,
   Menu,
   X,
@@ -23,7 +24,7 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
   const pathname = usePathname();
   const router = useRouter();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const { products, slides, resetToDefaults, logout, isAuthenticated } = useProducts();
+  const { products, slides, unreadInquiriesCount, resetToDefaults, logout, isAuthenticated } = useProducts();
 
   useEffect(() => {
     // If not authenticated, redirect to login page
@@ -34,6 +35,7 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const navItems = [
     { label: 'Dashboard', path: '/welcome-webmaster/dashboard', icon: LayoutDashboard },
+    { label: 'Inquiries & Leads', path: '/welcome-webmaster/inquiries', icon: Inbox, count: unreadInquiriesCount },
     { label: 'All Products', path: '/welcome-webmaster/products', icon: Package, count: products.length },
     { label: 'Add New Product', path: '/welcome-webmaster/products/new', icon: PlusCircle },
     { label: 'Hero Sliders', path: '/welcome-webmaster/sliders', icon: Sliders, count: slides.length },

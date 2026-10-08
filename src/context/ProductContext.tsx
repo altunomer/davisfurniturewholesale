@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import type { Product, ContactSettings, HeroSlide } from '../types/product';
+import type { Product, ContactSettings, HeroSlide, Inquiry } from '../types/product';
 import { INITIAL_PRODUCTS, SITE_INFO } from '../data/initialProducts';
 
 interface ProductContextType {
@@ -29,9 +29,18 @@ interface ProductContextType {
   changePassword: (newPass: string) => void;
   changeCredentials: (newUsername?: string, newPassword?: string) => void;
 
-  // Contact Settings
+  // Contact Settings & Mail Engine
   contactSettings: ContactSettings;
   updateContactSettings: (settings: Partial<ContactSettings>) => void;
+  sendTestEmail: (testRecipient?: string) => Promise<{ success: boolean; message: string }>;
+
+  // Inquiries & Leads Inbox
+  inquiries: Inquiry[];
+  addInquiry: (inquiryData: Omit<Inquiry, 'id' | 'createdAt' | 'isRead'>) => Promise<{ success: boolean; message?: string }>;
+  markInquiryAsRead: (id: string, isRead?: boolean) => void;
+  deleteInquiry: (id: string) => void;
+  clearAllInquiries: () => void;
+  unreadInquiriesCount: number;
 
   // Cloud status
   isCloudSynced: boolean;
@@ -46,6 +55,7 @@ const AUTH_KEY = 'davis_admin_authenticated';
 const USERNAME_KEY = 'davis_admin_username';
 const PASSWORD_KEY = 'davis_admin_password';
 const CONTACT_SETTINGS_KEY = 'davis_contact_settings';
+const INQUIRIES_STORAGE_KEY = 'davis_inquiries_v1';
 
 const DEFAULT_SLIDES: HeroSlide[] = SITE_INFO.heroSlides.map((s) => ({
   id: String(s.id),
@@ -61,8 +71,47 @@ const DEFAULT_CONTACT_SETTINGS: ContactSettings = {
   notificationSubject: 'New Trade Wholesale Inquiry - Davis Furniture',
   autoReplyMessage: 'Thank you for your inquiry. Our sales desk will respond promptly.',
   companyPhone: SITE_INFO.phone,
-  companyAddress: SITE_INFO.address
+  companyAddress: SITE_INFO.address,
+  mailProvider: 'resend',
+  fromEmail: 'onboarding@resend.dev',
+  fromName: 'Davis Furniture Wholesale',
+  resendApiKey: '',
+  smtpHost: 'mail.davisfurniturewholesale.com',
+  smtpPort: '465',
+  smtpUser: 'quotes@davisfurniturewholesale.com',
+  smtpPassword: '',
+  smtpSecure: true,
+  ccEmail: '',
+  enableAutoReply: false
 };
+
+const INITIAL_INQUIRIES: Inquiry[] = [
+  {
+    id: 'inq-sample-1',
+    type: 'quote',
+    name: 'John Miller',
+    company: 'Belfast Bed & Living Ltd',
+    email: 'john@belfastbeds.co.uk',
+    phone: '+44 28 9012 3456',
+    productName: 'Mars Range',
+    quantity: '10-20 Units',
+    message: 'Looking for wholesale trade pricing and delivery terms for next month to our Belfast warehouse.',
+    createdAt: new Date(Date.now() - 3600000 * 4).toISOString(),
+    isRead: false
+  },
+  {
+    id: 'inq-sample-2',
+    type: 'contact',
+    name: 'Emma Watson',
+    company: 'Watson Interiors Ltd',
+    email: 'emma@watsoninteriors.co.uk',
+    phone: '+44 77 0090 0123',
+    subject: 'Trade Catalog & Material Swatches',
+    message: 'Could you please forward your latest full wholesale catalogue PDF and linen fabric swatches?',
+    createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
+    isRead: true
+  }
+];
 
 // Helper for cloud sync
 async function apiPost(endpoint: string, data: any) {
@@ -82,6 +131,7 @@ async function apiPost(endpoint: string, data: any) {
 export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
   const [slides, setSlides] = useState<HeroSlide[]>(DEFAULT_SLIDES);
+  const [inquiries, setInquiries] = useState<Inquiry[]>(INITIAL_INQUIRIES);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [contactSettings, setContactSettings] = useState<ContactSettings>(DEFAULT_CONTACT_SETTINGS);
   const [isHydrated, setIsHydrated] = useState<boolean>(false);
@@ -118,6 +168,16 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (savedContact) {
           setContactSettings((prev) => ({ ...prev, ...JSON.parse(savedContact) }));
         }
+
+        const savedInquiries = localStorage.getItem(INQUIRIES_STORAGE_KEY);
+        if (savedInquiries) {
+          try {
+            const parsedInq = JSON.parse(savedInquiries);
+            if (Array.isArray(parsedInq)) {
+              setInquiries(parsedInq);
+            }
+          } catch {}
+        }
       }
     } catch (e) {
       console.error('Failed to load state from localStorage', e);
@@ -128,10 +188,11 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // 2. Fetch live data from Cloudflare KV
     async function fetchCloudData() {
       try {
-        const [prodRes, slideRes, setRes] = await Promise.allSettled([
+        const [prodRes, slideRes, setRes, inqRes] = await Promise.allSettled([
           fetch('/api/products').then((r) => (r.ok ? r.json() : null)),
           fetch('/api/slides').then((r) => (r.ok ? r.json() : null)),
-          fetch('/api/settings').then((r) => (r.ok ? r.json() : null))
+          fetch('/api/settings').then((r) => (r.ok ? r.json() : null)),
+          fetch('/api/inquiries').then((r) => (r.ok ? r.json() : null))
         ]);
 
         if (!isMounted) return;
@@ -164,6 +225,14 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
           setContactSettings((prev) => ({ ...prev, ...setRes.value }));
           if (typeof window !== 'undefined') {
             localStorage.setItem(CONTACT_SETTINGS_KEY, JSON.stringify(setRes.value));
+          }
+        }
+
+        // Inquiries from Cloudflare KV
+        if (inqRes.status === 'fulfilled' && inqRes.value && Array.isArray(inqRes.value) && inqRes.value.length > 0) {
+          setInquiries(inqRes.value);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(INQUIRIES_STORAGE_KEY, JSON.stringify(inqRes.value));
           }
         }
 
@@ -361,19 +430,123 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setContactSettings((prev) => {
       const updated = { ...prev, ...updates };
       apiPost('/api/settings', updated);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(CONTACT_SETTINGS_KEY, JSON.stringify(updated));
+      }
       return updated;
     });
   };
+
+  // Inquiries / Leads Engine
+  const addInquiry = async (inquiryData: Omit<Inquiry, 'id' | 'createdAt' | 'isRead'>) => {
+    const newInq: Inquiry = {
+      id: `inq-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      createdAt: new Date().toISOString(),
+      isRead: false,
+      ...inquiryData
+    };
+
+    setInquiries((prev) => {
+      const updated = [newInq, ...prev];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(INQUIRIES_STORAGE_KEY, JSON.stringify(updated));
+      }
+      return updated;
+    });
+
+    apiPost('/api/inquiries', newInq);
+
+    // Trigger email dispatch engine
+    try {
+      const res = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          inquiry: newInq,
+          config: contactSettings
+        })
+      });
+      const data = await res.json();
+      return { success: true, message: data.message };
+    } catch (err: any) {
+      console.warn('Mail dispatch warning:', err);
+      return { success: true, message: 'Inquiry saved successfully!' };
+    }
+  };
+
+  const markInquiryAsRead = (id: string, isRead: boolean = true) => {
+    setInquiries((prev) => {
+      const updated = prev.map((inq) => (inq.id === id ? { ...inq, isRead } : inq));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(INQUIRIES_STORAGE_KEY, JSON.stringify(updated));
+      }
+      return updated;
+    });
+  };
+
+  const deleteInquiry = (id: string) => {
+    setInquiries((prev) => {
+      const updated = prev.filter((inq) => inq.id !== id);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(INQUIRIES_STORAGE_KEY, JSON.stringify(updated));
+      }
+      return updated;
+    });
+    fetch('/api/inquiries', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id })
+    }).catch(() => {});
+  };
+
+  const clearAllInquiries = () => {
+    setInquiries([]);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(INQUIRIES_STORAGE_KEY);
+    }
+    fetch('/api/inquiries', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: null })
+    }).catch(() => {});
+  };
+
+  const sendTestEmail = async (testRecipient?: string): Promise<{ success: boolean; message: string }> => {
+    try {
+      const res = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          isTest: true,
+          testRecipient: testRecipient || contactSettings.recipientEmail,
+          config: contactSettings
+        })
+      });
+      const data = await res.json();
+      return {
+        success: data.success,
+        message: data.message || (data.success ? 'Test email dispatched successfully!' : 'Dispatch failed.')
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        message: err.message || 'Network error while attempting test dispatch.'
+      };
+    }
+  };
+
+  const unreadInquiriesCount = inquiries.filter((i) => !i.isRead).length;
 
   // Manual trigger to force sync everything to cloud
   const syncToCloud = useCallback(async () => {
     await Promise.all([
       apiPost('/api/products', products),
       apiPost('/api/slides', slides),
-      apiPost('/api/settings', contactSettings)
+      apiPost('/api/settings', contactSettings),
+      apiPost('/api/inquiries', inquiries)
     ]);
     setIsCloudSynced(true);
-  }, [products, slides, contactSettings]);
+  }, [products, slides, contactSettings, inquiries]);
 
   return (
     <ProductContext.Provider
@@ -399,6 +572,13 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
         changeCredentials,
         contactSettings,
         updateContactSettings,
+        sendTestEmail,
+        inquiries,
+        addInquiry,
+        markInquiryAsRead,
+        deleteInquiry,
+        clearAllInquiries,
+        unreadInquiriesCount,
         isCloudSynced,
         syncToCloud
       }}

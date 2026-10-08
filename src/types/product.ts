@@ -28,12 +28,46 @@ export interface SiteSettings {
   };
 }
 
+export interface Inquiry {
+  id: string;
+  type: 'contact' | 'quote';
+  name: string;
+  company?: string;
+  email: string;
+  phone?: string;
+  productName?: string;
+  quantity?: string;
+  subject?: string;
+  message: string;
+  createdAt: string;
+  isRead: boolean;
+}
+
 export interface ContactSettings {
   recipientEmail: string;
   notificationSubject: string;
   autoReplyMessage: string;
   companyPhone: string;
   companyAddress: string;
+  
+  // Mail Dispatch Engine Settings
+  mailProvider: 'resend' | 'smtp' | 'custom';
+  
+  // Resend / API mode
+  resendApiKey?: string;
+  fromEmail?: string;
+  fromName?: string;
+  
+  // SMTP mode
+  smtpHost?: string;
+  smtpPort?: string;
+  smtpUser?: string;
+  smtpPassword?: string;
+  smtpSecure?: boolean;
+  
+  // Routing
+  ccEmail?: string;
+  enableAutoReply?: boolean;
 }
 
 export interface HeroSlide {

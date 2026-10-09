@@ -337,6 +337,22 @@ export default {
           });
         }
       }
+    // Handle /welcome-webmaster/products/edit/* fallback for newly created products in KV
+    if (url.pathname.startsWith('/welcome-webmaster/products/edit/')) {
+      const assetRes = await env.ASSETS.fetch(request);
+      if (assetRes.status === 404) {
+        const shellUrl = new URL('/welcome-webmaster/products/edit/2829', request.url);
+        const shellRes = await env.ASSETS.fetch(new Request(shellUrl, request));
+        if (shellRes.ok) {
+          return new Response(shellRes.body, {
+            status: 200,
+            headers: {
+              ...Object.fromEntries(shellRes.headers),
+              'Content-Type': 'text/html;charset=UTF-8',
+            },
+          });
+        }
+      }
       return assetRes;
     }
 

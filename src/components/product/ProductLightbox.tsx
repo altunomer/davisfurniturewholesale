@@ -131,6 +131,7 @@ export const ProductLightbox: React.FC<ProductLightboxProps> = ({
   return createPortal(
     <div
       className="fixed inset-0 z-[99999] overflow-hidden bg-black/95 backdrop-blur-md select-none touch-none overscroll-none flex items-center justify-center animate-in fade-in duration-200"
+      style={{ cursor: scale > 1 ? 'zoom-out' : 'default' }}
       onMouseMove={resetControlsTimer}
       onTouchStart={resetControlsTimer}
       onWheel={handleWheel}
@@ -218,8 +219,9 @@ export const ProductLightbox: React.FC<ProductLightboxProps> = ({
             transform: `scale(${scale})`,
             maxHeight: hasMultipleImages ? 'calc(100dvh - 180px)' : 'calc(100dvh - 110px)',
             maxWidth: 'calc(100vw - 32px)',
+            cursor: scale === 1 ? 'zoom-in' : 'zoom-out',
           }}
-          className="w-auto h-auto object-contain rounded-xl shadow-2xl transition-transform duration-200 block mx-auto select-none pointer-events-auto cursor-zoom-in"
+          className="w-auto h-auto object-contain rounded-xl shadow-2xl transition-transform duration-200 block mx-auto select-none pointer-events-auto"
           draggable={false}
           onClick={(e) => {
             e.stopPropagation();

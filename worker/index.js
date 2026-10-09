@@ -337,6 +337,9 @@ export default {
           });
         }
       }
+      return assetRes;
+    }
+
     // Handle /welcome-webmaster/products/edit/* fallback for newly created products in KV
     if (url.pathname.startsWith('/welcome-webmaster/products/edit/')) {
       const assetRes = await env.ASSETS.fetch(request);

@@ -359,8 +359,36 @@ export default {
       return assetRes;
     }
 
-    // Default: serve static assets from ./out
-    return env.ASSETS.fetch(request);
+    // Default: serve static assets from ./out with modern caching headers
+    const assetRes = await env.ASSETS.fetch(request);
+    
+    // Cache static immutable assets (_next/static, images, fonts)
+    if (assetRes.ok && request.method === 'GET') {
+      const pathname = url.pathname;
+      let cacheHeader = '';
+
+      if (pathname.startsWith('/_next/static/')) {
+        // Next.js chunks are content-hashed, safe for long cache
+        cacheHeader = 'public, max-age=31536000, immutable';
+      } else if (
+        pathname.match(/\.(webp|png|jpg|jpeg|svg|ico|woff|woff2|ttf)$/i)
+      ) {
+        // Images and fonts cache for 30 days with revalidation
+        cacheHeader = 'public, max-age=2592000, stale-while-revalidate=86400';
+      }
+
+      if (cacheHeader) {
+        const newHeaders = new Headers(assetRes.headers);
+        newHeaders.set('Cache-Control', cacheHeader);
+        return new Response(assetRes.body, {
+          status: assetRes.status,
+          statusText: assetRes.statusText,
+          headers: newHeaders,
+        });
+      }
+    }
+
+    return assetRes;
   },
 };
 

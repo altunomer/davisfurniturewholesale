@@ -45,8 +45,11 @@ export const EditorialSection: React.FC = () => {
               <img
                 src="/images/editorial-1.webp"
                 alt="Elegance in details"
+                width={800}
+                height={500}
                 className="w-full h-full object-cover"
                 loading="lazy"
+                decoding="async"
               />
             </div>
             <div className="absolute -bottom-6 -left-6 bg-white p-6 rounded-xl shadow-lg border border-neutral-100 hidden sm:block max-w-xs">
@@ -70,8 +73,11 @@ export const EditorialSection: React.FC = () => {
               <img
                 src="/images/editorial-2.webp"
                 alt="Quality in every stitch"
+                width={800}
+                height={500}
                 className="w-full h-full object-cover"
                 loading="lazy"
+                decoding="async"
               />
             </div>
             <div className="absolute -top-6 -right-6 bg-white p-6 rounded-xl shadow-lg border border-neutral-100 hidden sm:block max-w-xs">

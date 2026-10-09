@@ -112,6 +112,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
                 <img
                   src={SITE_INFO.logo}
                   alt="Davis Furniture"
+                  width={190}
+                  height={48}
                   className="h-10 md:h-12 w-auto object-contain transition-transform duration-200 group-hover:opacity-90"
                 />
               </Link>

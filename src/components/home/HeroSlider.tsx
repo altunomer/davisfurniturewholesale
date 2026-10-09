@@ -69,8 +69,12 @@ export const HeroSlider: React.FC = () => {
                 <img
                   src={slide.desktopImage}
                   alt={slide.title || 'Davis Furniture Banner'}
+                  width={1600}
+                  height={678}
                   className="w-full h-full object-cover object-center"
                   loading={index === 0 ? 'eager' : 'lazy'}
+                  // @ts-expect-error fetchPriority is supported in modern browsers
+                  fetchPriority={index === 0 ? 'high' : 'auto'}
                   decoding="async"
                 />
               </picture>
@@ -101,18 +105,22 @@ export const HeroSlider: React.FC = () => {
 
         {/* Slide Indicators / Dots */}
         {slides.length > 1 && (
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex space-x-1.5 z-10 bg-black/25 backdrop-blur-xs px-3 py-1.5 rounded-full">
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center space-x-1 z-10 bg-black/25 backdrop-blur-xs px-2.5 py-1 rounded-full">
             {slides.map((_, idx) => (
               <button
                 key={idx}
                 onClick={() => setCurrentSlide(idx)}
-                className={`w-2 h-2 rounded-full transition-all duration-300 cursor-pointer ${
-                  currentSlide === idx
-                    ? 'w-6 bg-white'
-                    : 'bg-white/60 hover:bg-white'
-                }`}
+                className="p-1.5 focus:outline-none cursor-pointer flex items-center justify-center"
                 aria-label={`Go to slide ${idx + 1}`}
-              />
+              >
+                <span
+                  className={`block rounded-full transition-all duration-300 ${
+                    currentSlide === idx
+                      ? 'w-6 h-2 bg-white'
+                      : 'w-2 h-2 bg-white/60 hover:bg-white'
+                  }`}
+                />
+              </button>
             ))}
           </div>
         )}

@@ -45,6 +45,8 @@ export const FavoritesSection: React.FC = () => {
                   <img
                     src={primaryImage}
                     alt={product.name}
+                    width={600}
+                    height={600}
                     className={`w-full h-full object-cover object-center transition-all duration-500 group-hover:scale-105 ${
                       secondaryImage !== primaryImage ? 'group-hover:opacity-0' : ''
                     }`}
@@ -55,6 +57,8 @@ export const FavoritesSection: React.FC = () => {
                     <img
                       src={secondaryImage}
                       alt={`${product.name} alternate view`}
+                      width={600}
+                      height={600}
                       className="absolute inset-0 w-full h-full object-cover object-center opacity-0 group-hover:opacity-100 transition-all duration-500 group-hover:scale-105"
                       loading="lazy"
                       decoding="async"

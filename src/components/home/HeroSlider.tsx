@@ -73,7 +73,6 @@ export const HeroSlider: React.FC = () => {
                   height={678}
                   className="w-full h-full object-cover object-center"
                   loading={index === 0 ? 'eager' : 'lazy'}
-                  // @ts-expect-error fetchPriority is supported in modern browsers
                   fetchPriority={index === 0 ? 'high' : 'auto'}
                   decoding="async"
                 />

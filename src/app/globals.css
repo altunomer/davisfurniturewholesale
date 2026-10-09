@@ -58,3 +58,14 @@
   background: #999;
 }
 
+/* Explicit Cross-Browser Zoom Cursors */
+.lightbox-zoom-in {
+  cursor: -webkit-zoom-in !important;
+  cursor: zoom-in !important;
+}
+
+.lightbox-zoom-out {
+  cursor: -webkit-zoom-out !important;
+  cursor: zoom-out !important;
+}
+

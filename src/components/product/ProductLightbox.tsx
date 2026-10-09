@@ -22,6 +22,10 @@ export const ProductLightbox: React.FC<ProductLightboxProps> = ({
   const [mounted, setMounted] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [scale, setScale] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0, posX: 0, posY: 0 });
+  const hasMovedRef = useRef(false);
   const [showControls, setShowControls] = useState(true);
   const controlsTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -33,8 +37,18 @@ export const ProductLightbox: React.FC<ProductLightboxProps> = ({
   useEffect(() => {
     setCurrentIndex(initialIndex);
     setScale(1);
+    setPosition({ x: 0, y: 0 });
+    setIsDragging(false);
     setShowControls(true);
   }, [initialIndex, isOpen]);
+
+  // Reset position if zoomed out to 1
+  useEffect(() => {
+    if (scale <= 1) {
+      setPosition({ x: 0, y: 0 });
+      setIsDragging(false);
+    }
+  }, [scale]);
 
   // Auto-hide controls after 3.5 seconds of inactivity
   const resetControlsTimer = useCallback(() => {
@@ -59,11 +73,13 @@ export const ProductLightbox: React.FC<ProductLightboxProps> = ({
 
   const nextImage = useCallback(() => {
     setScale(1);
+    setPosition({ x: 0, y: 0 });
     setCurrentIndex((prev) => (prev + 1) % images.length);
   }, [images.length]);
 
   const prevImage = useCallback(() => {
     setScale(1);
+    setPosition({ x: 0, y: 0 });
     setCurrentIndex((prev) => (prev - 1 + images.length) % images.length);
   }, [images.length]);
 
@@ -93,6 +109,57 @@ export const ProductLightbox: React.FC<ProductLightboxProps> = ({
     };
   }, [isOpen, nextImage, prevImage, onClose, resetControlsTimer]);
 
+  // Window-level mouse/touch drag listeners for seamless panning
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleWindowMouseMove = (e: MouseEvent) => {
+      const deltaX = e.clientX - dragStartRef.current.x;
+      const deltaY = e.clientY - dragStartRef.current.y;
+      if (Math.abs(deltaX) > 4 || Math.abs(deltaY) > 4) {
+        hasMovedRef.current = true;
+      }
+      setPosition({
+        x: dragStartRef.current.posX + deltaX,
+        y: dragStartRef.current.posY + deltaY
+      });
+    };
+
+    const handleWindowMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    const handleWindowTouchMove = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      const touch = e.touches[0];
+      const deltaX = touch.clientX - dragStartRef.current.x;
+      const deltaY = touch.clientY - dragStartRef.current.y;
+      if (Math.abs(deltaX) > 4 || Math.abs(deltaY) > 4) {
+        hasMovedRef.current = true;
+      }
+      setPosition({
+        x: dragStartRef.current.posX + deltaX,
+        y: dragStartRef.current.posY + deltaY
+      });
+    };
+
+    const handleWindowTouchEnd = () => {
+      setIsDragging(false);
+    };
+
+    window.addEventListener('mousemove', handleWindowMouseMove);
+    window.addEventListener('mouseup', handleWindowMouseUp);
+    window.addEventListener('touchmove', handleWindowTouchMove, { passive: true });
+    window.addEventListener('touchend', handleWindowTouchEnd);
+
+    return () => {
+      window.removeEventListener('mousemove', handleWindowMouseMove);
+      window.removeEventListener('mouseup', handleWindowMouseUp);
+      window.removeEventListener('touchmove', handleWindowTouchMove);
+      window.removeEventListener('touchend', handleWindowTouchEnd);
+    };
+  }, [isDragging]);
+
   if (!isOpen || !mounted || images.length === 0) return null;
 
   // Zoom helpers
@@ -105,13 +172,18 @@ export const ProductLightbox: React.FC<ProductLightboxProps> = ({
   const zoomOut = (e?: React.MouseEvent) => {
     e?.stopPropagation();
     resetControlsTimer();
-    setScale((s) => Math.max(s - 0.5, 1));
+    setScale((s) => {
+      const next = Math.max(s - 0.5, 1);
+      if (next === 1) setPosition({ x: 0, y: 0 });
+      return next;
+    });
   };
 
   const resetZoom = (e?: React.MouseEvent) => {
     e?.stopPropagation();
     resetControlsTimer();
     setScale(1);
+    setPosition({ x: 0, y: 0 });
   };
 
   // Wheel zoom without page scrolling
@@ -121,8 +193,78 @@ export const ProductLightbox: React.FC<ProductLightboxProps> = ({
     if (e.deltaY < 0) {
       setScale((s) => Math.min(s + 0.2, 3));
     } else if (e.deltaY > 0) {
-      setScale((s) => Math.max(s - 0.2, 1));
+      setScale((s) => {
+        const next = Math.max(s - 0.2, 1);
+        if (next === 1) setPosition({ x: 0, y: 0 });
+        return next;
+      });
     }
+  };
+
+  // Drag / Pan handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (scale <= 1) return;
+    e.preventDefault();
+    setIsDragging(true);
+    hasMovedRef.current = false;
+    dragStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      posX: position.x,
+      posY: position.y
+    };
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    resetControlsTimer();
+    if (!isDragging || scale <= 1) return;
+    const deltaX = e.clientX - dragStartRef.current.x;
+    const deltaY = e.clientY - dragStartRef.current.y;
+    if (Math.abs(deltaX) > 4 || Math.abs(deltaY) > 4) {
+      hasMovedRef.current = true;
+    }
+    setPosition({
+      x: dragStartRef.current.posX + deltaX,
+      y: dragStartRef.current.posY + deltaY
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // Touch Drag Handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    resetControlsTimer();
+    if (scale <= 1 || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    setIsDragging(true);
+    hasMovedRef.current = false;
+    dragStartRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      posX: position.x,
+      posY: position.y
+    };
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    resetControlsTimer();
+    if (!isDragging || scale <= 1 || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - dragStartRef.current.x;
+    const deltaY = touch.clientY - dragStartRef.current.y;
+    if (Math.abs(deltaX) > 4 || Math.abs(deltaY) > 4) {
+      hasMovedRef.current = true;
+    }
+    setPosition({
+      x: dragStartRef.current.posX + deltaX,
+      y: dragStartRef.current.posY + deltaY
+    });
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
   };
 
   const activeSrc = images[currentIndex] || images[0];
@@ -217,21 +359,33 @@ export const ProductLightbox: React.FC<ProductLightboxProps> = ({
           src={activeSrc}
           alt={`${productName} view ${currentIndex + 1}`}
           style={{
-            transform: `scale(${scale})`,
+            transform: `translate3d(${position.x}px, ${position.y}px, 0px) scale(${scale})`,
             maxHeight: hasMultipleImages ? 'calc(100dvh - 180px)' : 'calc(100dvh - 110px)',
             maxWidth: 'calc(100vw - 32px)',
           }}
-          className={`w-auto h-auto object-contain rounded-xl shadow-2xl transition-transform duration-200 block mx-auto select-none pointer-events-auto ${
-            scale === 1 ? 'lightbox-zoom-in' : 'lightbox-zoom-out'
+          className={`w-auto h-auto object-contain rounded-xl shadow-2xl transition-transform block mx-auto select-none pointer-events-auto ${
+            isDragging ? 'duration-0' : 'duration-200'
+          } ${
+            scale === 1
+              ? 'lightbox-zoom-in'
+              : isDragging
+              ? 'lightbox-grabbing'
+              : 'lightbox-grab'
           }`}
           draggable={false}
+          onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
           onClick={(e) => {
             e.stopPropagation();
             resetControlsTimer();
+            if (hasMovedRef.current) {
+              return;
+            }
             if (scale === 1) {
-              setScale(1.75);
+              setScale(2);
             } else {
               setScale(1);
+              setPosition({ x: 0, y: 0 });
             }
           }}
         />

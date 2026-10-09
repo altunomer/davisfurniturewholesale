@@ -58,7 +58,7 @@
   background: #999;
 }
 
-/* Explicit Cross-Browser Zoom Cursors */
+/* Explicit Cross-Browser Zoom & Pan Cursors */
 .lightbox-zoom-in {
   cursor: -webkit-zoom-in !important;
   cursor: zoom-in !important;
@@ -67,5 +67,15 @@
 .lightbox-zoom-out {
   cursor: -webkit-zoom-out !important;
   cursor: zoom-out !important;
+}
+
+.lightbox-grab {
+  cursor: -webkit-grab !important;
+  cursor: grab !important;
+}
+
+.lightbox-grabbing {
+  cursor: -webkit-grabbing !important;
+  cursor: grabbing !important;
 }
 

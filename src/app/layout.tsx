@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Ubuntu } from 'next/font/google';
 import './globals.css';
 import { ProductProvider } from '../context/ProductContext';
+import { CookieConsent } from '../components/common/CookieConsent';
 
 const ubuntu = Ubuntu({
   subsets: ['latin'],
@@ -56,6 +57,7 @@ export default function RootLayout({
       <body className={`${ubuntu.className} min-h-screen flex flex-col bg-white text-neutral-900`}>
         <ProductProvider>
           {children}
+          <CookieConsent />
         </ProductProvider>
       </body>
     </html>

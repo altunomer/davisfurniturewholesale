@@ -63,6 +63,24 @@ export default function PrivacyPolicyPage() {
             </p>
           </section>
 
+          <section>
+            <h2 className="text-xl font-bold text-neutral-900 mb-3">5. Cookies and PECR Compliance</h2>
+            <p>
+              In accordance with the UK Privacy and Electronic Communications Regulations (PECR) and UK GDPR, our website uses cookies to ensure our digital catalogue and order systems function reliably:
+            </p>
+            <ul className="list-disc pl-5 space-y-1.5 mt-2">
+              <li>
+                <strong>Strictly Necessary Cookies:</strong> Essential for core operations such as session state, security verification, and accessibility preferences. These do not store personally identifiable data and cannot be switched off.
+              </li>
+              <li>
+                <strong>Performance &amp; Analytics Cookies (Optional):</strong> Allow us to count visits and traffic sources to measure and improve wholesale catalog browsing. Information is aggregated and completely anonymized.
+              </li>
+            </ul>
+            <p className="mt-2 text-xs text-neutral-500">
+              You can adjust or withdraw your consent at any time via your browser settings or using the on-screen cookie preferences.
+            </p>
+          </section>
+
           <section className="bg-neutral-50 p-6 rounded-xl border border-neutral-200">
             <h3 className="text-base font-bold text-neutral-900 mb-2 flex items-center">
               <ShieldCheck className="w-5 h-5 text-amber-600 mr-2" /> Inquiries &amp; Data Rights
